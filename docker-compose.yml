@@ -1,0 +1,8 @@
+services:
+  tg-gpt:
+    container_name: tg-gpt
+    build: .
+    env_file: dev.env
+    restart: on-failure
+    ports:
+      - 8443:8443

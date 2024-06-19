@@ -1,0 +1,3 @@
+app:
+  name: "tg-gpt"
+  graceful_shutdown_timeout: 10s

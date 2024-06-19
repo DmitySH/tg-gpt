@@ -1,0 +1,13 @@
+#cloud-config
+users:
+  - name: dimasik
+    groups: sudo
+    shell: /bin/bash
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDdvXeqgpC1T1TiUyv5kDkEXoZc+qFOw4wLg9NbBXBJMQz2C8JEjCjUHlhNiQ2oPEDpX9Np5pglB4hAr+SKBIDTsMKMnKMxfexByzGIcBi5aBKBi8n6agIZIKPkNai2Y8fBhzsvGC9GoPghVZo7NyGFMkuT7TrOr60xTp21C9vlSSQ3MGDQo9i9y2/jVMwa9LH1zlDFKdAGCsJwEI3Xl5yu1mwonoFkWthFj/hrwZrYTpSRaVGb/EDQMlTgpxKcn6uBhP3otncjHDvW1TD6UdsQEEnPJiG/yCWOwSiE9HVoEIeSLgx8KFuSzqCN14WJHVkEoNTMoKwrdtoAcqziRMzZpfnmthZgjKxscERB6SHTTapVrAXvdg+ttxdQlgTbUM//wByafgLbHSQyC+tWuHn4zonRSFZwhhMJwgb/ztL+r0FJYWPBsW6dsgdrxdBlnZLiSo8/isW7PFOjFrJFsaD4uAUK8SI7x+QSYn48p+nfJY6F+0IsP8ObfxnqgZO7A60= dshagarov@mbp-dshagarov-OZON-VWPX2Y5Q2T
+
+chpasswd:
+  list: |
+     dimasik:admin
+  expire: False
