@@ -1,22 +1,59 @@
 package tgbot
 
 import (
-	"log"
+	"time"
 
+	"github.com/DmitySH/tg-gpt/internal/service"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type Bot struct {
-	b *tgbotapi.BotAPI
+type BotReader struct {
+	cfg Config
+	api *tgbotapi.BotAPI
+
+	updateProcessor service.UpdateProcessor
 }
 
-func NewBot() Bot {
-	bot, err := tgbotapi.NewBotAPI("6863229346:AAFI7GEN40qFDRu4fx7itO7ueLE7gUICVTQ")
-	if err != nil {
-		log.Panic(err)
+func NewBotReader(cfg Config, botAPI *tgbotapi.BotAPI, updateProcessor service.UpdateProcessor) BotReader {
+	return BotReader{
+		api:             botAPI,
+		cfg:             cfg,
+		updateProcessor: updateProcessor,
+	}
+}
+
+func (b BotReader) StartReceivingUpdates() {
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 30
+
+	updates := b.api.GetUpdatesChan(u)
+	firstUpdate, ok := skipOldUpdatesAndGetFirstActual(updates)
+	if ok {
+		b.updateProcessor.ProcessUpdate(firstUpdate)
 	}
 
-	bot.Debug = true
+	go func() {
+		for update := range updates {
+			b.updateProcessor.ProcessUpdate(update)
+		}
+	}()
+}
 
-	return Bot{b: bot}
+func skipOldUpdatesAndGetFirstActual(updates tgbotapi.UpdatesChannel) (tgbotapi.Update, bool) {
+	startTime := time.Now().UTC()
+	for update := range updates {
+		if update.Message == nil {
+			continue
+		}
+
+		if time.Unix(int64(update.Message.Date), 0).UTC().After(startTime.Add(-time.Second * 5)) {
+			return update, true
+		}
+	}
+
+	return tgbotapi.Update{}, false
+}
+
+func (b BotReader) StopReceivingUpdates() {
+	b.api.StopReceivingUpdates()
 }

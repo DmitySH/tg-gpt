@@ -22,7 +22,7 @@ func main() {
 	closer.SetShutdownTimeout(config.Duration("app.graceful_shutdown_timeout"))
 
 	a := app.NewApp(cfg)
-	if a.Run(ctx) != nil {
-		loggy.Fatalf("failed to run app: %v", err)
+	if err = a.Run(ctx); err != nil {
+		loggy.Fatalf("can't run app: %v", err)
 	}
 }
