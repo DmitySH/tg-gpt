@@ -1,12 +1,19 @@
 package service
 
 import (
+	"context"
+	"github.com/DmitySH/tg-gpt/internal/pkg/loggy"
+
 	"github.com/DmitySH/tg-gpt/internal/domain"
 	"github.com/sourcegraph/conc/pool"
 )
 
 type OnCommandUsecase interface {
-	HandleBotCommand(update domain.TGUpdate)
+	HandleBotCommand(ctx context.Context, update domain.TGUpdate)
+}
+
+type OnBasicMessageUsecase interface {
+	HandleBasicMessage(ctx context.Context, update domain.TGUpdate)
 }
 
 type UpdateProcessor struct {
@@ -14,13 +21,14 @@ type UpdateProcessor struct {
 	p      *pool.Pool
 	stopCh chan struct{}
 
-	onCommandUsecase OnCommandUsecase
+	onCommandUsecase      OnCommandUsecase
+	onBasicMessageUsecase OnBasicMessageUsecase
 }
 
 func NewUpdateProcessor(cfg UpdateProcessorConfig,
-	onCommandUsecase OnCommandUsecase) UpdateProcessor {
+	onCommandUsecase OnCommandUsecase) *UpdateProcessor {
 
-	return UpdateProcessor{
+	return &UpdateProcessor{
 		cfg:              cfg,
 		stopCh:           make(chan struct{}),
 		p:                pool.New().WithMaxGoroutines(cfg.WorkersCount),
@@ -28,7 +36,9 @@ func NewUpdateProcessor(cfg UpdateProcessorConfig,
 	}
 }
 
-func (u UpdateProcessor) ProcessUpdate(update domain.TGUpdate) {
+func (u *UpdateProcessor) ProcessUpdate(update domain.TGUpdate) {
+	ctx := context.Background()
+
 	select {
 	case <-u.stopCh:
 		return
@@ -36,21 +46,28 @@ func (u UpdateProcessor) ProcessUpdate(update domain.TGUpdate) {
 	}
 
 	u.p.Go(func() {
-		if update.Message == nil {
-			return
-		}
+		defer func() {
+			if r := recover(); r != nil {
+				loggy.Errorln("recovered from panic", r)
+			}
+		}()
 
-		u.routeUpdate(update)
+		u.processUpdate(ctx, update)
 	})
 }
 
-func (u UpdateProcessor) routeUpdate(update domain.TGUpdate) {
-	if update.Message.Command() != "" {
-		u.onCommandUsecase.HandleBotCommand(update)
+func (u *UpdateProcessor) processUpdate(ctx context.Context, update domain.TGUpdate) {
+	if update.Message != nil && update.Message.Command() != "" {
+		u.onCommandUsecase.HandleBotCommand(ctx, update)
+		return
+	}
+
+	if update.Message != nil {
+		u.onBasicMessageUsecase.HandleBasicMessage(ctx, update)
 	}
 }
 
-func (u UpdateProcessor) Stop() {
+func (u *UpdateProcessor) Stop() {
 	close(u.stopCh)
 	u.p.Wait()
 }

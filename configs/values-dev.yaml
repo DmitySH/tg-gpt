@@ -2,3 +2,7 @@ app:
   name: "tg-gpt"
   graceful_shutdown_timeout: 40s
   update_processor_worker_count: 10
+
+store:
+  ttl: 20m
+  max_capacity: 100

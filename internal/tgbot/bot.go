@@ -11,18 +11,18 @@ type BotReader struct {
 	cfg Config
 	api *tgbotapi.BotAPI
 
-	updateProcessor service.UpdateProcessor
+	updateProcessor *service.UpdateProcessor
 }
 
-func NewBotReader(cfg Config, botAPI *tgbotapi.BotAPI, updateProcessor service.UpdateProcessor) BotReader {
-	return BotReader{
+func NewBotReader(cfg Config, botAPI *tgbotapi.BotAPI, updateProcessor *service.UpdateProcessor) *BotReader {
+	return &BotReader{
 		api:             botAPI,
 		cfg:             cfg,
 		updateProcessor: updateProcessor,
 	}
 }
 
-func (b BotReader) StartReceivingUpdates() {
+func (b *BotReader) StartReceivingUpdates() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 30
 
@@ -54,6 +54,6 @@ func skipOldUpdatesAndGetFirstActual(updates tgbotapi.UpdatesChannel) (tgbotapi.
 	return tgbotapi.Update{}, false
 }
 
-func (b BotReader) StopReceivingUpdates() {
+func (b *BotReader) StopReceivingUpdates() {
 	b.api.StopReceivingUpdates()
 }

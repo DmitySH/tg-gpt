@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/DmitySH/tg-gpt/internal/command"
 	"github.com/DmitySH/tg-gpt/internal/pkg/closer"
 	"github.com/DmitySH/tg-gpt/internal/pkg/loggy"
 	"github.com/DmitySH/tg-gpt/internal/pkg/secret"
 	"github.com/DmitySH/tg-gpt/internal/service"
+	"github.com/DmitySH/tg-gpt/internal/store"
 	"github.com/DmitySH/tg-gpt/internal/tgbot"
 	"github.com/DmitySH/tg-gpt/internal/usecase"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -35,7 +35,8 @@ func (a *App) Run(_ context.Context) error {
 			WorkersCount: a.cfg.App.UpdateProcessorWorkerCount,
 		},
 		usecase.NewOnCommandUsecase(
-			command.NewAskCommand(botAPI),
+			store.NewChatSessionStorage(a.cfg.TTL, uint64(a.cfg.MaxCapacity)),
+			botAPI,
 		),
 	)
 
