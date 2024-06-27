@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/DmitySH/tg-gpt/internal/domain"
 	"github.com/sashabaranov/go-openai"
 )
 
@@ -37,17 +38,24 @@ func NewOpenAI(cfg OpenAIConfig) (*OpenAI, error) {
 	}, nil
 }
 
-func (o *OpenAI) GetCompletion(ctx context.Context, content string) (string, error) {
+func (o *OpenAI) GetCompletion(ctx context.Context, chatHistory domain.ChatHistory, content string) (string, error) {
+	messages := make([]openai.ChatCompletionMessage, 0, len(chatHistory)+1)
+	for _, hist := range chatHistory {
+		messages = append(messages, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleUser,
+			Content: hist,
+		})
+	}
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: content,
+	})
+
 	resp, err := o.client.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: content,
-				},
-			},
+			Model:    openai.GPT3Dot5Turbo,
+			Messages: messages,
 		},
 	)
 	if err != nil {

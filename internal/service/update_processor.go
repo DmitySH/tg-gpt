@@ -2,18 +2,18 @@ package service
 
 import (
 	"context"
-	"github.com/DmitySH/tg-gpt/internal/pkg/loggy"
 
 	"github.com/DmitySH/tg-gpt/internal/domain"
+	"github.com/DmitySH/tg-gpt/internal/pkg/loggy"
 	"github.com/sourcegraph/conc/pool"
 )
 
 type OnCommandUsecase interface {
-	HandleBotCommand(ctx context.Context, update domain.TGUpdate)
+	HandleBotCommand(ctx context.Context, update domain.TGUpdate) error
 }
 
 type OnBasicMessageUsecase interface {
-	HandleBasicMessage(ctx context.Context, update domain.TGUpdate)
+	HandleBasicMessage(ctx context.Context, update domain.TGUpdate) error
 }
 
 type UpdateProcessor struct {
@@ -26,13 +26,14 @@ type UpdateProcessor struct {
 }
 
 func NewUpdateProcessor(cfg UpdateProcessorConfig,
-	onCommandUsecase OnCommandUsecase) *UpdateProcessor {
+	onCommandUsecase OnCommandUsecase, onBasicMessageUsecase OnBasicMessageUsecase) *UpdateProcessor {
 
 	return &UpdateProcessor{
-		cfg:              cfg,
-		stopCh:           make(chan struct{}),
-		p:                pool.New().WithMaxGoroutines(cfg.WorkersCount),
-		onCommandUsecase: onCommandUsecase,
+		cfg:                   cfg,
+		stopCh:                make(chan struct{}),
+		p:                     pool.New().WithMaxGoroutines(cfg.WorkersCount),
+		onCommandUsecase:      onCommandUsecase,
+		onBasicMessageUsecase: onBasicMessageUsecase,
 	}
 }
 
@@ -52,19 +53,23 @@ func (u *UpdateProcessor) ProcessUpdate(update domain.TGUpdate) {
 			}
 		}()
 
-		u.processUpdate(ctx, update)
+		err := u.processUpdate(ctx, update)
+		if err != nil {
+			loggy.Errorln("can't process update:", err)
+		}
 	})
 }
 
-func (u *UpdateProcessor) processUpdate(ctx context.Context, update domain.TGUpdate) {
+func (u *UpdateProcessor) processUpdate(ctx context.Context, update domain.TGUpdate) error {
 	if update.Message != nil && update.Message.Command() != "" {
-		u.onCommandUsecase.HandleBotCommand(ctx, update)
-		return
+		return u.onCommandUsecase.HandleBotCommand(ctx, update)
 	}
 
 	if update.Message != nil {
-		u.onBasicMessageUsecase.HandleBasicMessage(ctx, update)
+		return u.onBasicMessageUsecase.HandleBasicMessage(ctx, update)
 	}
+
+	return nil
 }
 
 func (u *UpdateProcessor) Stop() {

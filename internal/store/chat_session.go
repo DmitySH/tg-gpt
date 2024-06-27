@@ -9,19 +9,19 @@ import (
 )
 
 type ChatSessionStorage struct {
-	store *ttlcache.Cache[int64, domain.Chatter]
+	store *ttlcache.Cache[int64, domain.ChatHistory]
 }
 
 func NewChatSessionStorage(defaultTTL time.Duration, maxCapacity uint64) *ChatSessionStorage {
 	return &ChatSessionStorage{
-		store: ttlcache.New[int64, domain.Chatter](
-			ttlcache.WithTTL[int64, domain.Chatter](defaultTTL),
-			ttlcache.WithCapacity[int64, domain.Chatter](maxCapacity),
+		store: ttlcache.New[int64, domain.ChatHistory](
+			ttlcache.WithTTL[int64, domain.ChatHistory](defaultTTL),
+			ttlcache.WithCapacity[int64, domain.ChatHistory](maxCapacity),
 		),
 	}
 }
 
-func (c *ChatSessionStorage) GetChatSession(_ context.Context, userID int64) (domain.Chatter, error) {
+func (c *ChatSessionStorage) GetChatSession(_ context.Context, userID int64) (domain.ChatHistory, error) {
 	return c.store.Get(userID).Value(), nil
 }
 
@@ -29,7 +29,12 @@ func (c *ChatSessionStorage) HasChatSession(_ context.Context, userID int64) (bo
 	return c.store.Has(userID), nil
 }
 
-func (c *ChatSessionStorage) CreateChatSession(_ context.Context, userID int64, chatter domain.Chatter) error {
-	c.store.Set(userID, chatter, ttlcache.DefaultTTL)
+func (c *ChatSessionStorage) CreateChatSession(_ context.Context, userID int64, history domain.ChatHistory) error {
+	c.store.Set(userID, history, ttlcache.DefaultTTL)
+	return nil
+}
+
+func (c *ChatSessionStorage) DeleteChatSession(_ context.Context, userID int64) error {
+	c.store.Delete(userID)
 	return nil
 }

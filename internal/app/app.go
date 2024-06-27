@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/DmitySH/tg-gpt/internal/gpt"
 	"github.com/DmitySH/tg-gpt/internal/pkg/closer"
 	"github.com/DmitySH/tg-gpt/internal/pkg/loggy"
 	"github.com/DmitySH/tg-gpt/internal/pkg/secret"
@@ -30,13 +31,29 @@ func (a *App) Run(_ context.Context) error {
 		return err
 	}
 
+	chatSessionStorage := store.NewChatSessionStorage(a.cfg.TTL, uint64(a.cfg.MaxCapacity))
+
+	chatGPT, err := gpt.NewOpenAI(gpt.OpenAIConfig{
+		APIKey:    secret.GetString("CHAT_GTP_API_KEY"),
+		ProxyURL:  secret.GetString("PROXY_URL"),
+		ProxyAuth: secret.GetString("PROXY_AUTH"),
+	})
+	if err != nil {
+		return fmt.Errorf("can't init chat gpt: %w", err)
+	}
+
 	updateProcessor := service.NewUpdateProcessor(
 		service.UpdateProcessorConfig{
 			WorkersCount: a.cfg.App.UpdateProcessorWorkerCount,
 		},
 		usecase.NewOnCommandUsecase(
-			store.NewChatSessionStorage(a.cfg.TTL, uint64(a.cfg.MaxCapacity)),
+			chatSessionStorage,
 			botAPI,
+		),
+		usecase.NewOnBasicMessageUsecase(
+			chatSessionStorage,
+			botAPI,
+			chatGPT,
 		),
 	)
 
